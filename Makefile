@@ -3,6 +3,7 @@ BUILDDIR:= build
 ROOT:=$(BUILDDIR)/rootfs
 BUILDCHROOT:=$(BUILDDIR)/buildchroot
 REPO:=$(BUILDDIR)/repo
+APATH:=PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 PACKAGES:=$(REPO)/x86_64/webui-1-r0.apk $(REPO)/x86_64/linux-hypervisor-4.16.0-r0.apk
 
@@ -71,7 +72,7 @@ chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES)
 	sudo umount $(ROOT)/proc
 	sudo umount $(ROOT)/sys
 
-packages: $(REPO)/x86_64/webui-1-r0.apk
+$(REPO)/x86_64/APKINDEX.tar.gz: $(PACKAGES)
 	cp $(BUILDCHROOT)/packages/builder/x86_64/APKINDEX.tar.gz $(REPO)/x86_64/APKINDEX.tar.gz
 
 $(REPO)/x86_64/webui-1-r0.apk: $(BUILDCHROOT) APKBUILD
@@ -92,7 +93,7 @@ $(REPO)/x86_64/%.apk: $(BUILDCHROOT) package/$$(word 1,$$(subst -, ,$$*))/APKBUI
 	@rm -rf $(BUILDDIR)/home/builder/$(word 1,$(subst -, ,$*))
 	sudo cp -rv package/$(word 1,$(subst -, ,$*)) $(BUILDCHROOT)/home/builder/
 	sudo chown 1000 -R $(BUILDCHROOT)/home/builder/$(word 1,$(subst -, ,$*))
-	sudo env -i chroot --userspec 1000:1000 $(BUILDCHROOT) /bin/sh -c "cd /home/builder/$(word 1,$(subst -, ,$*)) && abuild checksum && abuild -r"
+	sudo env -i $(APATH) chroot --userspec 1000:1000 $(BUILDCHROOT) /bin/sh -c "cd /home/builder/$(word 1,$(subst -, ,$*)) && abuild checksum && abuild -r"
 	cp $(BUILDCHROOT)/packages/builder/x86_64/$*.apk $(REPO)/x86_64/$*.apk
 
 $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
@@ -144,4 +145,4 @@ clean:
 	-sudo rm -rf $(BUILDDIR)/mnt
 
 .INTERMEDIATE: $(BUILDDIR)/tools/apk-tools-static.apk
-.PHONY: clean chroot packages
+.PHONY: clean chroot
