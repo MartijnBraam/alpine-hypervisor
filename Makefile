@@ -5,7 +5,7 @@ BUILDCHROOT:=$(BUILDDIR)/buildchroot
 REPO:=$(BUILDDIR)/repo
 APATH:=PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
-PACKAGES:=$(REPO)/x86_64/webui-1-r0.apk $(REPO)/x86_64/linux-hypervisor-4.16.0-r0.apk
+PACKAGES:=$(REPO)/x86_64/webui-1-r0.apk $(REPO)/x86_64/libscrypt-1.21-r0.apk $(REPO)/x86_64/bcachefs-tools-1-r0.apk $(REPO)/x86_64/linux-hypervisor-4.16.0-r0.apk
 
 build/hypervisor.vdi: build/hypervisor.img
 	qemu-img convert -O vdi -f raw $< $@
@@ -38,9 +38,9 @@ build/hypervisor.img: chroot
 	-sudo umount $(BUILDDIR)/mnt/sys
 	-sudo umount $(BUILDDIR)/mnt
 
-chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES)
+chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES) $(REPO)/x86_64/APKINDEX.tar.gz
 	@mkdir -p $(ROOT)
-	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/latest-stable/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base qemu qemu-img python3 linux-vanilla grub grub-bios openrc
+	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/latest-stable/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base qemu qemu-img python3 grub grub-bios openrc
 	sudo cp -rv $(REPO)/ $(ROOT)/repo
 	sudo mknod -m 666 $(ROOT)/dev/full c 1 7
 	sudo mknod -m 666 $(ROOT)/dev/ptmx c 5 2
@@ -50,11 +50,11 @@ chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES)
 	sudo mknod -m 666 $(ROOT)/dev/tty c 5 0
 	echo "nameserver 1.1.1.1" | sudo tee $(ROOT)/etc/resolv.conf
 	sudo mkdir -p $(ROOT)/etc/apk
-	printf "$(MIRROR)/latest-stable/main\n/repo" | sudo tee $(ROOT)/etc/apk/repositories
+	printf "$(MIRROR)/latest-stable/main\n$(MIRROR)/latest-stable/community\n/repo" | sudo tee $(ROOT)/etc/apk/repositories
 	sudo mount -t proc none $(ROOT)/proc
 	sudo mount -o bind /sys $(ROOT)/sys
 	sudo env -i chroot $(ROOT) /sbin/apk update --allow-untrusted
-	sudo env -i chroot $(ROOT) /sbin/apk add webui --allow-untrusted
+	sudo env -i chroot $(ROOT) /sbin/apk add webui linux-hypervisor bcachefs-tools --allow-untrusted
 	sudo rm -rf $(ROOT)/repo
 	sudo env -i chroot $(ROOT) /sbin/rc-update add devfs sysinit
 	sudo env -i chroot $(ROOT) /sbin/rc-update add dmesg sysinit
@@ -107,7 +107,7 @@ $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
 	sudo mknod -m 666 $(BUILDCHROOT)/dev/tty c 5 0
 	echo "nameserver 1.1.1.1" | sudo tee $(BUILDCHROOT)/etc/resolv.conf
 	sudo mkdir -p $(BUILDCHROOT)/etc/apk
-	echo "$(MIRROR)/latest-stable/main" | sudo tee $(BUILDCHROOT)/etc/apk/repositories
+	printf "$(MIRROR)/latest-stable/main\n$(MIRROR)/latest-stable/community" | sudo tee $(BUILDCHROOT)/etc/apk/repositories
 	sudo mount -t proc none $(BUILDCHROOT)/proc
 	sudo mount -o bind /sys $(BUILDCHROOT)/sys
 	sudo env -i chroot $(BUILDCHROOT) /sbin/apk update
@@ -115,7 +115,9 @@ $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
 	sudo env -i chroot $(BUILDCHROOT) /bin/busybox addgroup builder abuild
 	sudo mkdir -p $(BUILDCHROOT)/home/builder/src
 	sudo env -i chroot $(BUILDCHROOT) /bin/sh -c "echo 'builder ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers"
-	sudo env -i chroot --userspec 1000:1000 $(BUILDCHROOT) /usr/bin/abuild-keygen -a -i -n
+	sudo env -i $(APATH) chroot --userspec 1000:1000 $(BUILDCHROOT) /usr/bin/abuild-keygen -n -q -a
+	sudo cp $(BUILDCHROOT)/.abuild/*.pub $(BUILDCHROOT)/etc/apk/keys
+	sudo su -c "cat $(BUILDCHROOT)/.abuild/abuild.conf >> $(BUILDCHROOT)/etc/abuild.conf"
 	sudo chmod -R 777 $(BUILDCHROOT)/home/builder
 
 $(BUILDDIR)/tools/apk.static: $(BUILDDIR)/tools/apk-tools-static.apk
