@@ -4,6 +4,8 @@ ROOT:=$(BUILDDIR)/rootfs
 BUILDCHROOT:=$(BUILDDIR)/buildchroot
 REPO:=$(BUILDDIR)/repo
 
+PACKAGES:=$(REPO)/x86_64/webui-1-r0.apk $(REPO)/x86_64/linux-hypervisor-4.16.0-r0.apk
+
 build/hypervisor.vdi: build/hypervisor.img
 	qemu-img convert -O vdi -f raw $< $@
 
@@ -35,7 +37,7 @@ build/hypervisor.img: chroot
 	-sudo umount $(BUILDDIR)/mnt/sys
 	-sudo umount $(BUILDDIR)/mnt
 
-chroot: tools packages
+chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES)
 	@mkdir -p $(ROOT)
 	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/latest-stable/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base qemu qemu-img python3 linux-vanilla grub grub-bios openrc
 	sudo cp -rv $(REPO)/ $(ROOT)/repo
@@ -72,7 +74,7 @@ chroot: tools packages
 packages: $(REPO)/x86_64/webui-1-r0.apk
 	cp $(BUILDCHROOT)/packages/builder/x86_64/APKINDEX.tar.gz $(REPO)/x86_64/APKINDEX.tar.gz
 
-$(REPO)/x86_64/webui-1-r0.apk: buildchroot APKBUILD
+$(REPO)/x86_64/webui-1-r0.apk: $(BUILDCHROOT) APKBUILD
 	@mkdir -p $(BUILDDIR)/source
 	@mkdir -p $(BUILDDIR)/repo/x86_64
 	@rm -rf $(BUILDDIR)/source/webui.tar.gz
@@ -84,7 +86,14 @@ $(REPO)/x86_64/webui-1-r0.apk: buildchroot APKBUILD
 	sudo env -i chroot --userspec 1000:1000 $(BUILDCHROOT) /bin/sh -c "cd /home/builder/webui && abuild checksum && abuild -r"
 	cp $(BUILDCHROOT)/packages/builder/x86_64/webui-1-r0.apk $(REPO)/x86_64/webui-1-r0.apk
 
-buildchroot: $(BUILDCHROOT)
+.SECONDEXPANSION:
+$(REPO)/x86_64/%.apk: $(BUILDCHROOT) package/$$(word 1,$$(subst -, ,$$*))/APKBUILD
+	@mkdir -p $(BUILDDIR)/repo/x86_64
+	@rm -rf $(BUILDDIR)/home/builder/$(word 1,$(subst -, ,$*))
+	sudo cp -rv package/$(word 1,$(subst -, ,$*)) $(BUILDCHROOT)/home/builder/
+	sudo chown 1000 -R $(BUILDCHROOT)/home/builder/$(word 1,$(subst -, ,$*))
+	sudo env -i chroot --userspec 1000:1000 $(BUILDCHROOT) /bin/sh -c "cd /home/builder/$(word 1,$(subst -, ,$*)) && abuild checksum && abuild -r"
+	cp $(BUILDCHROOT)/packages/builder/x86_64/$*.apk $(REPO)/x86_64/$*.apk
 
 $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
 	@mkdir -p $(BUILDCHROOT)
@@ -107,8 +116,6 @@ $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
 	sudo env -i chroot $(BUILDCHROOT) /bin/sh -c "echo 'builder ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers"
 	sudo env -i chroot --userspec 1000:1000 $(BUILDCHROOT) /usr/bin/abuild-keygen -a -i -n
 	sudo chmod -R 777 $(BUILDCHROOT)/home/builder
-
-tools: $(BUILDDIR)/tools/apk.static
 
 $(BUILDDIR)/tools/apk.static: $(BUILDDIR)/tools/apk-tools-static.apk
 	@echo UNTAR build/tools/apk.static
@@ -137,4 +144,4 @@ clean:
 	-sudo rm -rf $(BUILDDIR)/mnt
 
 .INTERMEDIATE: $(BUILDDIR)/tools/apk-tools-static.apk
-.PHONY: clean tools chroot packages buildchroot
+.PHONY: clean chroot packages
