@@ -19,12 +19,18 @@ build/hypervisor.img: chroot
 	sudo mount -o bind /sys $(BUILDDIR)/mnt/sys
 	sudo mknod -m 666 $(BUILDDIR)/mnt/dev/loop0 b 7 0
 	sudo mknod -m 666 $(BUILDDIR)/mnt/dev/loop1 b 7 1
-	echo "LABEL=hypervisor / auto defaults 1 1" | sudo tee $(BUILDDIR)/mnt/etc/fstab
+	sudo rm $(BUILDDIR)/mnt/etc/{hostname,resolv.conf,hosts}
+	sudo ln -s /mnt/config/hostname $(BUILDDIR)/mnt/etc/hostname
+	sudo ln -s /mnt/config/hosts $(BUILDDIR)/mnt/etc/hosts
+	sudo ln -s /mnt/config/resolv.conf $(BUILDDIR)/mnt/etc/resolv.conf
+	sudo cp system/fstab $(BUILDDIR)/mnt/etc/fstab
 	sudo mkdir -p $(BUILDDIR)/mnt/boot/grub
 	echo "(hd0) /dev/loop0" | sudo tee $(BUILDDIR)/mnt/boot/grub/device.map
 	sudo chroot $(BUILDDIR)/mnt /usr/sbin/grub-install --target i386-pc -v --boot-directory /boot --modules="ext2 part_msdos" /dev/loop0
 	sudo cp grub.cfg $(BUILDDIR)/mnt/boot/grub/grub.cfg
 	sudo chmod 777 $(BUILDDIR)/mnt/boot/grub/grub.cfg
+	sudo mkdir -p $(BUILDDIR)/mnt/etc/network
+	sudo cp system/interfaces $(BUILDDIR)/mnt/etc/network/interfaces
 	-sudo umount $(BUILDDIR)/mnt/proc
 	-sudo umount $(BUILDDIR)/mnt/sys
 	-sudo umount $(BUILDDIR)/mnt

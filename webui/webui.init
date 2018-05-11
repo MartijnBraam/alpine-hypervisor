@@ -3,7 +3,7 @@
 name=$RC_SVCNAME
 cfgfile="/etc/$RC_SVCNAME/$RC_SVCNAME.conf"
 command="/usr/bin/python3"
-command_args="-m webui.webui"
+command_args="-m webui.app"
 command_user="root"
 pidfile="/run/$RC_SVCNAME/$RC_SVCNAME.pid"
 command_background="yes"

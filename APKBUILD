@@ -1,6 +1,6 @@
 pkgname="webui"
 
-depends="python3"
+depends="python3 py3-flask"
 makedepends="python3-dev"
 
 pkgver=1

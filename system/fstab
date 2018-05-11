@@ -1,0 +1,5 @@
+LABEL=hypervisor    /           ext4    ro          0 1
+LABEL=config        /mnt/config ext4    noauto      0 0
+tmpfs               /var/lock   tmpfs   nodev       0 0
+tmpfs               /var/log    tmpfs   nodev       0 0
+tmpfs               /mnt        tmpfs   defaults    0 0
