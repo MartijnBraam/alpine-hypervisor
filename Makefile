@@ -5,7 +5,7 @@ BUILDCHROOT:=$(BUILDDIR)/buildchroot
 REPO:=$(BUILDDIR)/repo
 APATH:=PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
-PACKAGES:=$(REPO)/x86_64/webui-1-r0.apk $(REPO)/x86_64/libscrypt-1.21-r0.apk $(REPO)/x86_64/bcachefs-tools-1-r0.apk $(REPO)/x86_64/linux-hypervisor-4.16.0-r0.apk
+PACKAGES:=$(REPO)/x86_64/webui-1-r0.apk $(REPO)/x86_64/util-linux-2.32-r0.apk $(REPO)/x86_64/libscrypt-1.21-r0.apk $(REPO)/x86_64/bcachefs-tools-1-r0.apk $(REPO)/x86_64/linux-hypervisor-4.16.0-r0.apk
 
 build/hypervisor.vdi: build/hypervisor.img
 	qemu-img convert -O vdi -f raw $< $@
@@ -88,7 +88,7 @@ $(REPO)/x86_64/webui-1-r0.apk: $(BUILDCHROOT) APKBUILD
 	cp $(BUILDCHROOT)/packages/builder/x86_64/webui-1-r0.apk $(REPO)/x86_64/webui-1-r0.apk
 
 .SECONDEXPANSION:
-$(REPO)/x86_64/%.apk: $(BUILDCHROOT) package/$$(word 1,$$(subst -, ,$$*))/APKBUILD
+$(REPO)/x86_64/%.apk: | $(BUILDCHROOT)
 	@mkdir -p $(BUILDDIR)/repo/x86_64
 	@rm -rf $(BUILDDIR)/home/builder/$(word 1,$(subst -, ,$*))
 	sudo cp -rv package/$(word 1,$(subst -, ,$*)) $(BUILDCHROOT)/home/builder/
@@ -119,6 +119,9 @@ $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
 	sudo cp $(BUILDCHROOT)/.abuild/*.pub $(BUILDCHROOT)/etc/apk/keys
 	sudo su -c "cat $(BUILDCHROOT)/.abuild/abuild.conf >> $(BUILDCHROOT)/etc/abuild.conf"
 	sudo chmod -R 777 $(BUILDCHROOT)/home/builder
+	sudo mkdir -p $(BUILDCHROOT)/packages/builder/x86_64
+	sudo cp -rv $(REPO)/x86_64/*.apk $(BUILDCHROOT)/packages/builder/x86_64
+	sudo chmod -R 777 $(BUILDCHROOT)/packages
 
 $(BUILDDIR)/tools/apk.static: $(BUILDDIR)/tools/apk-tools-static.apk
 	@echo UNTAR build/tools/apk.static
@@ -137,7 +140,6 @@ clean:
 	-sudo umount $(BUILDCHROOT)/proc
 	-sudo umount $(BUILDCHROOT)/sys
 	-sudo rm -rfv $(BUILDCHROOT)
-	-rm -rfv $(BUILDDIR)/repo
 	-rm -rfv $(BUILDDIR)/source
 	-sudo umount $(BUILDDIR)/mnt/proc
 	-sudo umount $(BUILDDIR)/mnt/sys
