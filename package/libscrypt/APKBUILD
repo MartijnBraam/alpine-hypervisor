@@ -23,4 +23,6 @@ build() {
 package() {
 	cd "$builddir"
 	make DESTDIR="$pkgdir" PREFIX=/usr install
+	rm "$pkgdir"/usr/lib/libscrypt.so
+	cd "$pkgdir"/usr/lib && ln -s -f libscrypt.so.0 libscrypt.so
 }

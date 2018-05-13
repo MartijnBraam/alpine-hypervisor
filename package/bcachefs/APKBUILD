@@ -1,6 +1,6 @@
 pkgname="bcachefs-tools"
 
-depends=""
+depends="libscrypt"
 makedepends="util-linux-dev zstd-dev libuuid libsodium-dev keyutils-dev userspace-rcu-dev zlib-dev linux-headers libaio-dev attr-dev libscrypt-dev"
 
 _rel="800408be11898f6d53ceecfd894cce8860fda26a"

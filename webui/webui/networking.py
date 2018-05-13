@@ -50,3 +50,17 @@ def _get_interface_names():
         if interface.startswith('eth'):
             result.append(interface)
     return result
+
+
+def _setup_static(device, name, ip, netmask, gateway=None):
+    commands = [
+        ['ip', 'link', 'set', 'dev', device, 'up'],
+        ['brctl', 'addbr', name],
+        ['brctl', 'addif', name, device],
+        ['ip', 'address', 'add', '{}/{}'.format(ip, netmask), 'dev', device],
+    ]
+    if gateway:
+        commands.append(['ip', 'route', 'add', 'default', 'via', gateway])
+
+    for command in commands:
+        subprocess.check_call(command)

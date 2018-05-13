@@ -1,6 +1,6 @@
 pkgname="webui"
 
-depends="python3 py3-flask"
+depends="python3 py3-flask debootstrap qemu qemu-img lxc bridge lxc-templates"
 makedepends="python3-dev"
 
 pkgver=1

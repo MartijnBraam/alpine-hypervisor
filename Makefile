@@ -40,7 +40,7 @@ build/hypervisor.img: chroot
 
 chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES) $(REPO)/x86_64/APKINDEX.tar.gz
 	@mkdir -p $(ROOT)
-	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/latest-stable/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base qemu qemu-img python3 grub grub-bios openrc
+	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/latest-stable/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base python3 grub grub-bios openrc
 	sudo cp -rv $(REPO)/ $(ROOT)/repo
 	sudo mknod -m 666 $(ROOT)/dev/full c 1 7
 	sudo mknod -m 666 $(ROOT)/dev/ptmx c 5 2
