@@ -12,6 +12,19 @@ def mount_config_partition():
     return result == 0
 
 
+def format_bcachefs(bulk, cache):
+    command = ['bcachefs', 'format']
+    command.extend(['--group', 'bulk'])
+    command.extend(bulk)
+    if len(cache) > 0:
+        command.extend(['--group', 'cache'])
+        command.extend(cache)
+        command.extend(['--foreground_target', 'cache'])
+        command.extend(['--promote_target', 'cache'])
+    command.extend(['--background_target', 'bulk'])
+    print(command)
+
+
 def get_disks():
     result = []
     command = ['lsblk', '--nodeps', '-b', '-o', 'NAME,ROTA,HCTL,TRAN,SIZE,RM,MODEL,SERIAL,TYPE,FSTYPE', '--json']

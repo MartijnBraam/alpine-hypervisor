@@ -1,5 +1,24 @@
 {% extends "oobe/base.html.j2" %}
 
 {% block main %}
-First step!
+    <h2>Choose your storage</h2>
+    <p>
+        Hypervisor will create a bcachefs multidevice pool from the disks selected below, this will be your main
+        storage.
+    </p>
+    <form action="{{ url_for('setup_storage') }}" method="post">
+        {% for disk in disks %}
+            <div class="disk">
+                <label class="bulk"><input type="radio" name="disk_{{ disk.dev }}" value="bulk"> Bulk storage</label>
+                <label class="cache"><input type="radio" name="disk_{{ disk.dev }}" value="cache"> Cache</label>
+                <label class="none"><input type="radio" name="disk_{{ disk.dev }}" value="none" checked> Don't
+                    use</label>
+                <h3>{{ disk.dev }} ({{ disk.transport }} {{ disk.type }} on port {{ disk.port }})</h3>
+                <div class="model">{{ disk.model }}</div>
+                <div class="serial">{{ disk.serial }}</div>
+                <div class="size">{{ (disk.size / 1024 / 1024 / 1024) | round(2)}} GiB</div>
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn">Format disks</button>
+    </form>
 {% endblock %}
