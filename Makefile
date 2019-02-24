@@ -9,9 +9,11 @@ APATH:=PATH=/usr/sbin:/usr/bin:/sbin:/bin
 PACKAGES:=$(REPO)/x86_64/webui-1-r0.apk $(REPO)/x86_64/util-linux-2.32-r0.apk $(REPO)/x86_64/libscrypt-1.21-r0.apk $(REPO)/x86_64/bcachefs-tools-1-r0.apk $(REPO)/x86_64/linux-hypervisor-4.16.0-r0.apk
 
 build/hypervisor.vdi: build/hypervisor.img
+	@echo MKIMG creating hypervisor.vdi
 	qemu-img convert -O vdi -f raw $< $@
 
 build/hypervisor.img: chroot
+	@echo MKIMG creating hypervisor.img
 	dd if=/dev/zero of=$@ bs=1M count=1024
 	echo "2048,,83,*" | sfdisk $@
 	sudo losetup -fP $@
@@ -40,6 +42,7 @@ build/hypervisor.img: chroot
 	-sudo umount $(BUILDDIR)/mnt
 
 chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES) $(REPO)/x86_64/APKINDEX.tar.gz
+	@echo MKCHR Creating final chroot
 	@mkdir -p $(ROOT)
 	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/$(ALPINEVER)/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base python3 grub grub-bios openrc supervisor
 	sudo cp -rv $(REPO)/ $(ROOT)/repo
@@ -74,9 +77,11 @@ chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES) $(REPO)/x86_64/APKINDEX.tar.gz
 	sudo umount $(ROOT)/sys
 
 $(REPO)/x86_64/APKINDEX.tar.gz: $(PACKAGES)
-	cp $(BUILDCHROOT)/packages/builder/x86_64/APKINDEX.tar.gz $(REPO)/x86_64/APKINDEX.tar.gz
+	@echo MKIDX Creating APKINDEX for local repo
+	@cp $(BUILDCHROOT)/packages/builder/x86_64/APKINDEX.tar.gz $(REPO)/x86_64/APKINDEX.tar.gz
 
 $(REPO)/x86_64/webui-1-r0.apk: $(BUILDCHROOT) APKBUILD
+	@echo MKPKG building webui package
 	@mkdir -p $(BUILDDIR)/source
 	@mkdir -p $(BUILDDIR)/repo/x86_64
 	@rm -rf $(BUILDDIR)/source/webui.tar.gz
@@ -90,6 +95,7 @@ $(REPO)/x86_64/webui-1-r0.apk: $(BUILDCHROOT) APKBUILD
 
 .SECONDEXPANSION:
 $(REPO)/x86_64/%.apk: | $(BUILDCHROOT)
+	@echo MKPKG building $*
 	@mkdir -p $(BUILDDIR)/repo/x86_64
 	@rm -rf $(BUILDDIR)/home/builder/$(word 1,$(subst -, ,$*))
 	sudo cp -rv package/$(word 1,$(subst -, ,$*)) $(BUILDCHROOT)/home/builder/
@@ -98,6 +104,7 @@ $(REPO)/x86_64/%.apk: | $(BUILDCHROOT)
 	cp $(BUILDCHROOT)/packages/builder/x86_64/$*.apk $(REPO)/x86_64/$*.apk
 
 $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
+	@echo MKCHR creating buildchroot
 	@mkdir -p $(BUILDCHROOT)
 	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/$(ALPINEVER)/main -U --allow-untrusted --root $(BUILDCHROOT) --initdb add alpine-base alpine-sdk bash
 	sudo mknod -m 666 $(BUILDCHROOT)/dev/full c 1 7
@@ -131,7 +138,7 @@ $(BUILDDIR)/tools/apk.static: $(BUILDDIR)/tools/apk-tools-static.apk
 $(BUILDDIR)/tools/apk-tools-static.apk:
 	@echo FETCH build/tools/apk-tools-static.apk
 	@mkdir -p $(BUILDDIR)/tools
-	@curl $(MIRROR)/$(ALPINEVER)/main/x86_64/apk-tools-static-2.10.3-r1.apk -o "$@"
+	@curl $(MIRROR)/$(ALPINEVER)/main/x86_64/apk-tools-static-2.10.3-r1.apk -o "$@" --fail --silent --show-error
 
 clean:
 	-rm -rfv $(BUILDDIR)/tools
@@ -149,5 +156,10 @@ clean:
 	-rm -rfv $(BUILDDIR)/hypervisor.img
 	-sudo rm -rf $(BUILDDIR)/mnt
 
+run: build/hypervisor.img
+	@echo RUN   running resulting image...
+	qemu-system-x86_64 -m 1024 build/hypervisor.img
+
+
 .INTERMEDIATE: $(BUILDDIR)/tools/apk-tools-static.apk
-.PHONY: clean chroot
+.PHONY: clean chroot run
