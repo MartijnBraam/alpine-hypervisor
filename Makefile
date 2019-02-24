@@ -24,11 +24,15 @@ build/hypervisor.img: chroot
 	sudo mount -t ext4 -o loop /dev/loop0p3 $(BUILDDIR)/mnt
 	sudo mkdir $(BUILDDIR)/mnt/boot
 	sudo mount -o loop /dev/loop0p2 $(BUILDDIR)/mnt/boot
-	sudo cp -rv $(ROOT)/* $(BUILDDIR)/mnt
+	sudo cp -rv $(ROOT)/{bin,dev,etc,root,home,mnt,media,opt,usr,srv,var,lib,sbin,proc,sys} $(BUILDDIR)/mnt
+	sudo rm -f $(ROOT)/boot/boot
+	sudo cp -Prv $(ROOT)/boot/* $(BUILDDIR)/mnt/boot
 	sudo mount -t proc none $(BUILDDIR)/mnt/proc
 	sudo mount -o bind /sys $(BUILDDIR)/mnt/sys
 	sudo mknod -m 666 $(BUILDDIR)/mnt/dev/loop0 b 7 0
 	sudo mknod -m 666 $(BUILDDIR)/mnt/dev/loop1 b 7 1
+	sudo mknod -m 666 $(BUILDDIR)/mnt/dev/loop2 b 7 2
+	sudo mknod -m 666 $(BUILDDIR)/mnt/dev/loop3 b 7 3
 	sudo rm $(BUILDDIR)/mnt/etc/{hostname,resolv.conf,hosts}
 	sudo ln -s /mnt/config/hostname $(BUILDDIR)/mnt/etc/hostname
 	sudo ln -s /mnt/config/hosts $(BUILDDIR)/mnt/etc/hosts
