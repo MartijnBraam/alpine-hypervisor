@@ -1,4 +1,5 @@
 MIRROR := http://dl-cdn.alpinelinux.org/alpine
+ALPINEVER := v3.9
 BUILDDIR:= build
 ROOT:=$(BUILDDIR)/rootfs
 BUILDCHROOT:=$(BUILDDIR)/buildchroot
@@ -40,7 +41,7 @@ build/hypervisor.img: chroot
 
 chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES) $(REPO)/x86_64/APKINDEX.tar.gz
 	@mkdir -p $(ROOT)
-	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/latest-stable/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base python3 grub grub-bios openrc supervisor
+	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/$(ALPINEVER)/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base python3 grub grub-bios openrc supervisor
 	sudo cp -rv $(REPO)/ $(ROOT)/repo
 	sudo mknod -m 666 $(ROOT)/dev/full c 1 7
 	sudo mknod -m 666 $(ROOT)/dev/ptmx c 5 2
@@ -50,7 +51,7 @@ chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES) $(REPO)/x86_64/APKINDEX.tar.gz
 	sudo mknod -m 666 $(ROOT)/dev/tty c 5 0
 	echo "nameserver 1.1.1.1" | sudo tee $(ROOT)/etc/resolv.conf
 	sudo mkdir -p $(ROOT)/etc/apk
-	printf "$(MIRROR)/latest-stable/main\n$(MIRROR)/latest-stable/community\n/repo" | sudo tee $(ROOT)/etc/apk/repositories
+	printf "$(MIRROR)/$(ALPINEVER)/main\n$(MIRROR)/$(ALPINEVER)/community\n/repo" | sudo tee $(ROOT)/etc/apk/repositories
 	sudo mount -t proc none $(ROOT)/proc
 	sudo mount -o bind /sys $(ROOT)/sys
 	sudo env -i chroot $(ROOT) /sbin/apk update --allow-untrusted
@@ -98,7 +99,7 @@ $(REPO)/x86_64/%.apk: | $(BUILDCHROOT)
 
 $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
 	@mkdir -p $(BUILDCHROOT)
-	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/latest-stable/main -U --allow-untrusted --root $(BUILDCHROOT) --initdb add alpine-base alpine-sdk bash
+	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/$(ALPINEVER)/main -U --allow-untrusted --root $(BUILDCHROOT) --initdb add alpine-base alpine-sdk bash
 	sudo mknod -m 666 $(BUILDCHROOT)/dev/full c 1 7
 	sudo mknod -m 666 $(BUILDCHROOT)/dev/ptmx c 5 2
 	sudo mknod -m 644 $(BUILDCHROOT)/dev/random c 1 8
@@ -107,7 +108,7 @@ $(BUILDCHROOT): $(BUILDDIR)/tools/apk.static
 	sudo mknod -m 666 $(BUILDCHROOT)/dev/tty c 5 0
 	echo "nameserver 1.1.1.1" | sudo tee $(BUILDCHROOT)/etc/resolv.conf
 	sudo mkdir -p $(BUILDCHROOT)/etc/apk
-	printf "$(MIRROR)/latest-stable/main\n$(MIRROR)/latest-stable/community" | sudo tee $(BUILDCHROOT)/etc/apk/repositories
+	printf "$(MIRROR)/$(ALPINEVER)/main\n$(MIRROR)/$(ALPINEVER)/community" | sudo tee $(BUILDCHROOT)/etc/apk/repositories
 	sudo mount -t proc none $(BUILDCHROOT)/proc
 	sudo mount -o bind /sys $(BUILDCHROOT)/sys
 	sudo env -i chroot $(BUILDCHROOT) /sbin/apk update
@@ -130,7 +131,7 @@ $(BUILDDIR)/tools/apk.static: $(BUILDDIR)/tools/apk-tools-static.apk
 $(BUILDDIR)/tools/apk-tools-static.apk:
 	@echo FETCH build/tools/apk-tools-static.apk
 	@mkdir -p $(BUILDDIR)/tools
-	@curl $(MIRROR)/latest-stable/main/x86_64/apk-tools-static-2.9.1-r2.apk -o "$@"
+	@curl $(MIRROR)/$(ALPINEVER)/main/x86_64/apk-tools-static-2.10.3-r1.apk -o "$@"
 
 clean:
 	-rm -rfv $(BUILDDIR)/tools

@@ -1,0 +1,65 @@
+body,
+html {
+  padding: 0;
+  margin: 0;
+}
+body {
+  background: #eee;
+}
+body,
+td,
+th {
+  font-family: sans-serif;
+  font-size: 11pt;
+}
+main {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: block;
+  border-left: 1px dotted #aaa;
+  border-right: 1px dotted #aaa;
+  padding: 15px;
+  min-height: 100%;
+}
+.disk {
+  background: white;
+  padding: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.1);
+  position: relative;
+  padding-left: 150px;
+}
+.disk label {
+  position: absolute;
+  left: 10px;
+}
+.disk label.bulk {
+  top: 10px;
+}
+.disk label.cache {
+  top: 30px;
+}
+.disk label.none {
+  top: 50px;
+}
+.disk h3 {
+  padding: 0;
+  margin: 0;
+}
+.disk .model::before,
+.disk .serial::before,
+.disk .size::before {
+  font-weight: bold;
+  font-size: 0.8em;
+  width: 64px;
+  display: inline-block;
+}
+.disk .model::before {
+  content: "Model: ";
+}
+.disk .serial::before {
+  content: "Serial: ";
+}
+.disk .size::before {
+  content: "Size: ";
+}
