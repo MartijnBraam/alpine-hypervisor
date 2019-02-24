@@ -14,12 +14,16 @@ build/hypervisor.vdi: build/hypervisor.img
 
 build/hypervisor.img: chroot
 	@echo MKIMG creating hypervisor.img
-	dd if=/dev/zero of=$@ bs=1M count=1024
+	dd if=/dev/zero of=$@ bs=1M count=4096
 	echo "2048,,83,*" | sfdisk $@
 	sudo losetup -fP $@
-	sudo mkfs.ext4 -F /dev/loop0p1 -L hypervisor
+	sudo sfdisk /dev/loop0 < partitions.sfdisk
+	sudo mkfs.fat -F32 /dev/loop0p2
+	sudo mkfs.ext4 -F /dev/loop0p3 -L hypervisor
 	mkdir $(BUILDDIR)/mnt
-	sudo mount -t ext4 -o loop /dev/loop0p1 $(BUILDDIR)/mnt
+	sudo mount -t ext4 -o loop /dev/loop0p3 $(BUILDDIR)/mnt
+	sudo mkdir $(BUILDDIR)/mnt/boot
+	sudo mount -o loop /dev/loop0p2 $(BUILDDIR)/mnt/boot
 	sudo cp -rv $(ROOT)/* $(BUILDDIR)/mnt
 	sudo mount -t proc none $(BUILDDIR)/mnt/proc
 	sudo mount -o bind /sys $(BUILDDIR)/mnt/sys
@@ -32,19 +36,28 @@ build/hypervisor.img: chroot
 	sudo cp system/fstab $(BUILDDIR)/mnt/etc/fstab
 	sudo mkdir -p $(BUILDDIR)/mnt/boot/grub
 	echo "(hd0) /dev/loop0" | sudo tee $(BUILDDIR)/mnt/boot/grub/device.map
-	sudo chroot $(BUILDDIR)/mnt /usr/sbin/grub-install --target i386-pc -v --boot-directory /boot --modules="ext2 part_msdos" /dev/loop0
+	sudo chroot $(BUILDDIR)/mnt /usr/sbin/grub-install --target i386-pc -v --boot-directory /boot --modules="ext2 part_gpt" /dev/loop0
 	sudo cp grub.cfg $(BUILDDIR)/mnt/boot/grub/grub.cfg
 	sudo chmod 777 $(BUILDDIR)/mnt/boot/grub/grub.cfg
+
+	sudo mkdir -p $(BUILDDIR)/mnt/boot/EFI/Boot
+	sudo mkdir -p $(BUILDDIR)/mnt/boot/loader/entries
+	sudo cp uefi/loader.conf $(BUILDDIR)/mnt/boot/loader/loader.conf
+	sudo cp uefi/a.conf $(BUILDDIR)/mnt/boot/loader/entries/a.conf
+	sudo cp uefi/b.conf $(BUILDDIR)/mnt/boot/loader/entries/b.conf
+	sudo cp $(BUILDDIR)/mnt/usr/lib/gummiboot/gummibootx64.efi $(BUILDDIR)/mnt/boot/EFI/Boot/bootx64.efi
+
 	sudo mkdir -p $(BUILDDIR)/mnt/etc/network
 	sudo cp system/interfaces $(BUILDDIR)/mnt/etc/network/interfaces
 	-sudo umount $(BUILDDIR)/mnt/proc
 	-sudo umount $(BUILDDIR)/mnt/sys
+	-sudo umount $(BUILDDIR)/mnt/boot
 	-sudo umount $(BUILDDIR)/mnt
 
 chroot: $(BUILDDIR)/tools/apk.static $(PACKAGES) $(REPO)/x86_64/APKINDEX.tar.gz
 	@echo MKCHR Creating final chroot
 	@mkdir -p $(ROOT)
-	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/$(ALPINEVER)/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base python3 grub grub-bios openrc supervisor
+	sudo $(BUILDDIR)/tools/apk.static -X $(MIRROR)/$(ALPINEVER)/main -U --allow-untrusted --root $(ROOT) --initdb add alpine-base python3 grub grub-bios gummiboot openrc supervisor
 	sudo cp -rv $(REPO)/ $(ROOT)/repo
 	sudo mknod -m 666 $(ROOT)/dev/full c 1 7
 	sudo mknod -m 666 $(ROOT)/dev/ptmx c 5 2
@@ -151,6 +164,7 @@ clean:
 	-rm -rfv $(BUILDDIR)/source
 	-sudo umount $(BUILDDIR)/mnt/proc
 	-sudo umount $(BUILDDIR)/mnt/sys
+	-sudo umount $(BUILDDIR)/mnt/boot
 	-sudo umount $(BUILDDIR)/mnt
 	-sudo losetup -D
 	-rm -rfv $(BUILDDIR)/hypervisor.img
